@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>V2X Collision Warning</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#050b14">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Socket.io will be used via module -->
+</head>
+<body>
+  <div id="app">
+    <header class="sticky-header">
+      <div class="header-content">
+        <div class="logo">
+          <i data-lucide="radar"></i>
+          <span>V2X_GUARD</span>
+        </div>
+        <nav class="nav-links">
+          <button id="nav-home" class="nav-btn active">Home</button>
+          <button id="nav-mesh" class="nav-btn">Live Mesh</button>
+        </nav>
+        <div class="status-indicator">
+          <div class="status-dot"></div>
+          <span>STATUS: ONLINE</span>
+        </div>
+      </div>
+    </header>
+
+    <main id="main-content">
+      <!-- Home View -->
+      <section id="view-home" class="view-section active">
+        <div class="hero">
+          <h1>EVERY PHONE IS A <span class="text-glow">SAFETY DEVICE</span></h1>
+          <p class="subtitle">Decentralized Vehicle-to-Everything (V2X) collision avoidance network. Leveraging smartphone telemetry and live mesh routing to predict impacts before they happen.</p>
+          <div class="hero-actions">
+            <button id="btn-init-demo" class="btn btn-primary">Initialize Demo</button>
+            <button id="btn-view-specs" class="btn btn-outline">View Specs</button>
+          </div>
+        </div>
+
+        <div class="specs-grid" id="specs-section">
+          <div class="spec-card glass-card">
+            <i data-lucide="zap" class="spec-icon"></i>
+            <h3>10Hz Broadcast Rate</h3>
+            <p>High-frequency telemetry updates using WebSockets/WebRTC.</p>
+          </div>
+          <div class="spec-card glass-card">
+            <i data-lucide="shield-alert" class="spec-icon"></i>
+            <h3>~0.5s Reaction Advantage</h3>
+            <p>Predictive algorithms calculate Time-to-Collision (TTC) faster than human reaction times.</p>
+          </div>
+          <div class="spec-card glass-card">
+            <i data-lucide="smartphone" class="spec-icon"></i>
+            <h3>No Hardware Required</h3>
+            <p>Runs entirely on the edge, utilizing built-in GPS and IMU sensors.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Uplink View (Demo Initialization) -->
+      <section id="view-uplink" class="view-section">
+        <div class="uplink-container">
+          <div class="telemetry-card glass-card">
+            <div class="radar-animation">
+              <div class="radar-sweep"></div>
+              <i data-lucide="crosshair" class="crosshair-icon"></i>
+            </div>
+            <h2>Sensor Uplink</h2>
+            <p class="status-text" id="gps-status-text">LINK_OFFLINE</p>
+            <button id="btn-enable-gps" class="btn btn-primary">ENABLE GPS UPLINK</button>
+            
+            <div id="gps-data" class="telemetry-data hidden">
+              <div class="data-row"><span>LAT:</span> <span id="val-lat">--</span></div>
+              <div class="data-row"><span>LNG:</span> <span id="val-lng">--</span></div>
+              <div class="data-row"><span>SPD:</span> <span id="val-spd">-- m/s</span></div>
+              <div class="data-row"><span>ACC:</span> <span id="val-acc">-- m</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Live Mesh View -->
+      <section id="view-mesh" class="view-section">
+        <div class="mesh-grid">
+          <!-- Left Column -->
+          <div class="mesh-col-left">
+            <div class="glass-card this-device-card">
+              <h3><i data-lucide="radio"></i> This Device</h3>
+              <div class="input-group">
+                <label>Unit ID:</label>
+                <input type="text" id="unit-name" value="Unit 9766">
+              </div>
+              <p class="status-text" id="peer-id-display" style="font-size:0.8rem; margin-top:-0.5rem; margin-bottom:1rem; color:var(--text-dim); user-select:all; cursor:pointer;" title="Click to copy">P2P Network Connecting...</p>
+              
+              <div class="input-group" style="display:flex; gap:0.5rem;">
+                <input type="text" id="target-peer-id" placeholder="Enter Target Peer ID">
+                <button id="btn-connect-peer" class="btn btn-outline" style="padding:0.5rem;">Connect</button>
+              </div>
+
+              <button id="btn-start-broadcast" class="btn btn-primary w-full">START BROADCAST</button>
+            </div>
+            
+            <div class="glass-card roster-card">
+              <h3><i data-lucide="users"></i> Mesh Roster</h3>
+              <ul id="roster-list" class="roster-list">
+                <!-- Roster items will be populated by JS -->
+                <li class="empty-roster">No active nodes</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Right Column -->
+          <div class="mesh-col-right">
+            <div class="glass-card map-card">
+              <div class="card-header">
+                <h3><i data-lucide="map"></i> Mesh Map</h3>
+                <span class="live-badge">LIVE</span>
+              </div>
+              <div id="map" class="map-container"></div>
+            </div>
+            
+            <div class="glass-card collision-card">
+              <h3><i data-lucide="alert-triangle"></i> Collision Engine</h3>
+              <div id="collision-alerts" class="collision-alerts">
+                <div class="alert-item safe">
+                  <span>Pairwise TTC Calculations Active</span>
+                  <span class="ttc-val">SAFE</span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="glass-card geofence-card" style="margin-top: 1rem;">
+              <h3><i data-lucide="map-pin"></i> Geo Fencing</h3>
+              <div style="display:flex; gap:0.5rem; margin-bottom: 0.5rem; flex-wrap: wrap;">
+                <button id="btn-set-geofence" class="btn btn-outline" style="flex:1;">Set Zone (Current Loc)</button>
+                <button id="btn-clear-geofence" class="btn btn-outline" style="display:none; flex:1; border-color: var(--danger); color: var(--danger);">Clear</button>
+                <input type="number" id="geofence-radius" value="500" style="width: 100px; padding: 0.5rem; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; border-radius: 4px;" placeholder="Radius (m)">
+              </div>
+              <div id="geofence-alerts" class="collision-alerts">
+                <div class="alert-item safe">
+                  <span>Geo Fence Inactive</span>
+                  <span class="ttc-val" id="geofence-status-val">OFF</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script type="module" src="/app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js')
+        .then((reg) => console.log('Service Worker registered', reg))
+        .catch((err) => console.error('Service Worker registration failed', err));
+    }
+  </script>
+</body>
+</html>

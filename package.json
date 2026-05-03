@@ -1,0 +1,23 @@
+{
+  "name": "v2x-collision-warning",
+  "version": "1.0.0",
+  "description": "V2X Collision Warning with Geofencing",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "build": "vite build",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "leaflet": "^1.9.4",
+    "lucide": "^0.292.0",
+    "peerjs": "^1.5.2",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}
